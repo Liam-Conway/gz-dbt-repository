@@ -1,25 +1,12 @@
-with
-    orders as (select * from {{ ref("stg_raw__sales") }}),
-
-    products as (select * from {{ ref("stg_raw__product") }}),
-    
-    orders_joined_products as (
-        select
-            orders.date_date,
-            orders.orders_id,
-            orders.products_id,
-            orders.quantity,
-            orders.revenue,
-            products.purchase_price,
-            round(orders.quantity * products.purchase_price, 2) as purchase_cost,
-        from orders
-
-        left join products using (products_id)
-    ),
-
-    sales_margin as (
-        select *, round((revenue - purchase_cost), 2) as margin from orders_joined_products
-    )
-select *
-from
-    sales_margin
+select
+   a.orders_id,
+   a.date_date,
+   b.products_id,
+    SUM(CAST(a.revenue AS FLOAT64)) AS revenue,
+    SUM(CAST(a.quantity AS INT64)) AS quantity,
+    SUM(CAST(b.purchase_price AS FLOAT64)) AS purchase_price,
+    SUM(CAST(b.purchase_price AS FLOAT64) * CAST(a.quantity AS INT64)) AS purchase_cost,
+    SUM(CAST(a.revenue AS FLOAT64) - (CAST(b.purchase_price AS FLOAT64) * CAST(a.quantity AS INT64))) AS margin
+from {{ ref("stg_raw__sales") }} as a
+left join {{ ref("stg_raw__product") }} as b on a.products_id = b.products_id
+group by a.date_date, a.orders_id, b.products_id
