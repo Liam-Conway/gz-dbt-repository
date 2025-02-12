@@ -1,0 +1,225 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: gz_raw_data
+    description: original dataset in a raw format
+    tables:
+      - name: product
+        identifier: raw_gz_product
+        description: table contain all products and their information
+        columns:
+          - name: products_id
+            description: id of the product, must be unique and not null
+            tests:
+              - unique
+              - not_null
+          - name: purchase_price
+            description: price the product was purchased, should not be null
+
+      - name: sales
+        identifier: raw_gz_sales
+        description: table contain all sales and their information
+        columns:
+          - name: date_date
+            description: date of creation of the order
+          - name: order_id
+            description: id of the order
+          - name: pdt_id
+            description: id of the product
+          - name: revenue
+            description: revenue by product
+          - name: quantity
+            description: quantity of the product in the order
+        tests:
+          - unique:
+              # description: concat order_id and pdt_id to form a PK
+              column_name: "(orders_id || '-' || pdt_id)"
+        freshness:
+          warn_after:
+            count: 1
+            period: day
+          error_after:
+            count: 854
+            period: day
+        loaded_at_field: "CAST(date_date AS TIMESTAMP)"
+
+      - name: ship
+        identifier: raw_gz_ship
+        description: table contains all shipments and their information
+        columns:
+          - name: orders_id
+            description: id of the order, should be pk, that means - unique
+            tests:
+              - not_null
+              - unique
+          - name: shipping_fee
+            description: what columns is this one?
+          - name: shipping_fee_1
+            description: what columns is this one?
+          - name: logCost
+            description: logistic costs
+          - name: ship_cost
+            description: cost og the shippment
+
+models:
+  - name: int_sales_margin
+    description: join between stg_raw_sales and stg_raw_products to display purchase_cost and margin
+    columns:
+      - name: products_id
+        description: id of product
+        tests:
+          - not_null
+      - name: date_date
+        description: date of order
+        tests:
+          - not_null
+      - name: orders_id
+        description: id of order
+        tests:
+          - not_null
+      - name: revenue
+        description: revenue per order
+        tests:
+          - not_null
+      - name: quantity
+        description: nb of products ordered
+        tests:
+          - not_null
+      - name: purchase_price
+        description: cost paid by customer
+        tests:
+          - not_null
+      - name: purchase_cost
+        description: quantity * purchase_price
+        tests:
+          - not_null
+      - name: margin
+        description: revenue - purchase_cost
+        tests:
+          - not_null
+    tests:
+       - unique:
+           column_name: "(orders_id || '-' || products_id)"
+          
+  - name: int_orders_margin
+    description: finding the margin per order
+    columns:
+      - name: orders_id
+        description: id of order
+        tests:
+          - not_null
+      - name: date_date
+        description: date of order
+        tests:
+          - not_null
+      - name: revenue
+        description: revenue per order
+        tests:
+          - not_null
+      - name: quantity
+        description: nb of products ordered
+        tests:
+          - not_null
+      - name: purchase_cost
+        description: cost paid by customer
+        tests:
+          - not_null
+      - name: margin
+        description: revenue - purchase_cost (from int_sales_margin)
+        tests:
+          - not_null
+  - name: int_orders_operational
+    description: finding operational margin per order 
+    columns:
+      - name: orders_id
+        description: order key
+        tests:
+          - not_null
+      - name: date_date
+        description: order date
+        tests:
+          - not_null
+      - name: operational_margin
+        description: margin + shipping_fee - log_cost - ship_cost
+        tests:
+          - not_null
+      - name: quantity
+        description: nb of products ordered
+        tests:
+          - not_null
+      - name: revenue
+        description: cost paid by customer
+        tests:
+          - not_null
+      - name: purchase_cost
+        description: quantity * purchase_price
+        tests:
+          - not_null
+      - name: margin
+        description: revenue - purchase_cost
+        tests:
+          - not_null
+      - name: shipping_fee
+        description: amount charged to customers for shipping their order
+        tests:
+          - not_null
+      - name: logcost
+        description: total cost of handling, storing, and moving goods for each order
+        tests:
+          - not_null
+      - name: ship_cost
+        description: actual cost incurred by the business to ship the product
+        tests:
+          - not_null
+  - name: finance_days
+    description: all finance data at a daily granularity
+    columns:
+      - name: date_date
+        description: order date
+        tests:
+          - not_null
+      - name: nb_transactions
+        description: nb of transactions
+        tests:
+          - not_null
+      - name: revenue
+        description: cost paid by customer
+        tests:
+          - not_null
+      - name: average_basket
+        description: standard average revenue per order
+        tests:
+          - not_null
+      - name: average_basket_bis
+        description: adjusted calculation of average basket
+        tests:
+          - not_null
+      - name: margin
+        description: revenue - purchase_cost
+        tests:
+          - not_null
+      - name: operational_margin
+        description: margin + shipping_fee - log_cost - ship_cost
+        tests:
+          - not_null
+      - name: purchase_cost
+        description: quantity * purchase_price
+        tests:
+          - not_null
+      - name: shipping_fee
+        description: amount charged to customers for shipping their order
+        tests:
+          - not_null
+      - name: logcost
+        description: total cost of handling, storing, and moving goods for each order
+        tests:
+          - not_null
+      - name: ship_cost
+        description: actual cost incurred by the business to ship the product
+        tests:
+          - not_null
+      - name: quantity
+        description: nb of products ordered
+        tests:
+          - not_null
