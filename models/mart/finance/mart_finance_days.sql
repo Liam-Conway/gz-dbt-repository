@@ -11,3 +11,4 @@ sum(quantity) as total_quantity_of_products_sold
 from {{ref("int_orders_operational")}}
 group by date_date
 order by date_date desc
+
